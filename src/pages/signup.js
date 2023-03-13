@@ -3,15 +3,17 @@ import fire from "../files/firebase";
 import { useHistory } from "react-router";
 import "../App.css";
 import CryptoJS from "crypto-js";
+import CircularProgress from "@material-ui/core/CircularProgress";
 
 export const Signup = () => {
   const [profile, setprofile] = useState("");
-  const [url, seturl] = useState("");
+  const [seturl] = useState("");
   const [name, setname] = useState("");
   const [email, setemail] = useState("");
   const [password, setpassword] = useState("");
   const [mobile, setmobile] = useState("");
   const [admin, setadmin] = useState(false);
+  const [loading, setLoading] = useState(false);
   const history = useHistory();
   const secretPass = "XkhZG4fW2t2W";
   const signUp = () => {
@@ -22,7 +24,7 @@ export const Signup = () => {
     var container = document.getElementById("container");
     container.classList.remove("right-panel-active");
   };
-  const handleSubmit = e => {
+  const handleSubmit = (e) => {
     var currentDate = new Date();
     var day = currentDate.getDate();
     var month = currentDate.getMonth() + 1;
@@ -32,44 +34,48 @@ export const Signup = () => {
     if (name === "" || email === "" || password === "" || mobile === "") {
       alert("please fill all fields");
     } else {
-      var encryptedPassword = CryptoJS.AES
-        .encrypt(JSON.stringify(password), secretPass)
-        .toString();
+      var encryptedPassword = CryptoJS.AES.encrypt(
+        JSON.stringify(password),
+        secretPass
+      ).toString();
       // alert(encryptedPassword);
-      fire.auth().createUserWithEmailAndPassword(email, password).then(() => {
-        fire
-          .storage()
-          .ref("profile Images")
-          .child(fulldate.toString() + ".jpg")
-          .put(profile)
-          .then(() => {
-            fire
-              .storage()
-              .ref("profile Images")
-              .child(fulldate.toString() + ".jpg")
-              .getDownloadURL()
-              .then(url => {
-                console.log(url);
-                seturl(url);
-                alert(url);
-                fire
-                  .firestore()
-                  .collection("users")
-                  .add({
-                    profile: url,
-                    name: name,
-                    email: email,
-                    password: encryptedPassword,
-                    mobile: mobile
-                  })
-                  .then(() => {
-                    alert("account created successfully");
-                  })
-                  .catch(err => console.log(err));
-              })
-              .catch(err => console.log(err));
-          });
-      });
+      fire
+        .auth()
+        .createUserWithEmailAndPassword(email, password)
+        .then(() => {
+          fire
+            .storage()
+            .ref("profile Images")
+            .child(fulldate.toString() + ".jpg")
+            .put(profile)
+            .then(() => {
+              fire
+                .storage()
+                .ref("profile Images")
+                .child(fulldate.toString() + ".jpg")
+                .getDownloadURL()
+                .then((url) => {
+                  console.log(url);
+                  seturl(url);
+                  alert(url);
+                  fire
+                    .firestore()
+                    .collection("users")
+                    .add({
+                      profile: url,
+                      name: name,
+                      email: email,
+                      password: encryptedPassword,
+                      mobile: mobile,
+                    })
+                    .then(() => {
+                      alert("account created successfully");
+                    })
+                    .catch((err) => console.log(err));
+                })
+                .catch((err) => console.log(err));
+            });
+        });
     }
     setname("");
     setemail("");
@@ -77,27 +83,28 @@ export const Signup = () => {
     setmobile("");
   };
 
-  const handleLogin = e => {
+  const handleLogin = (e) => {
     e.preventDefault();
+    console.log("Set loading to true");
+    setLoading(true);
     if (email === "" || password === "") {
       alert("please enter email and password");
     }
-    if (admin == true) {
+    if (admin) {
       fire
         .firestore()
         .collection("admin")
         .where("email", "==", email)
         .get()
-        .then(snapshot =>
-          snapshot.forEach(ele => {
+        .then((snapshot) =>
+          snapshot.forEach((ele) => {
             var data = ele.data();
             var profile = data.profile;
             var name = data.name;
             var email = data.email;
             var password = data.password;
             var mobile = data.mobile;
-
-            if (email === email && password === password) {
+            if (email && password) {
               history.push({
                 pathname: "/adminpage",
                 state: {
@@ -105,8 +112,8 @@ export const Signup = () => {
                   name: name,
                   email: email,
                   password: password,
-                  mobile: mobile
-                }
+                  mobile: mobile,
+                },
               });
             } else {
               alert("invalid email or password");
@@ -114,45 +121,52 @@ export const Signup = () => {
           })
         );
     } else {
-      fire.auth().signInWithEmailAndPassword(email, password).then(() => {
-        fire
-          .firestore()
-          .collection("users")
-          .where("email", "==", email)
-          .get()
-          .then(snapshot => {
-            snapshot.forEach(doc => {
-              var data = doc.data();
-              var profile = data.profile;
-              var name = data.name;
-              var email = data.email;
-              var mobile = data.mobile;
-              const bytes = CryptoJS.AES.decrypt(data.password, secretPass);
-              const decryptedPassword = JSON.parse(
-                bytes.toString(CryptoJS.enc.Utf8)
-              );
-              console.log(decryptedPassword);
-              if (email === email && password === decryptedPassword) {
-                history.push({
-                  pathname: "/homepage",
-                  state: {
-                    profile: profile,
-                    name: name,
-                    email: email,
-                    password: decryptedPassword,
-                    mobile: mobile
-                  }
-                });
-              } else {
-                alert("invalid email or password");
-              }
+      fire
+        .auth()
+        .signInWithEmailAndPassword(email, password)
+        .then(() => {
+          fire
+            .firestore()
+            .collection("users")
+            .where("email", "==", email)
+            .get()
+            .then((snapshot) => {
+              snapshot.forEach((doc) => {
+                var data = doc.data();
+                var profile = data.profile;
+                var name = data.name;
+                var email = data.email;
+                var mobile = data.mobile;
+                const bytes = CryptoJS.AES.decrypt(data.password, secretPass);
+                const decryptedPassword = JSON.parse(
+                  bytes.toString(CryptoJS.enc.Utf8)
+                );
+                console.log(decryptedPassword);
+                if (email && password === decryptedPassword) {
+                  history.push({
+                    pathname: "/homepage",
+                    state: {
+                      profile: profile,
+                      name: name,
+                      email: email,
+                      password: decryptedPassword,
+                      mobile: mobile,
+                    },
+                  });
+                } else {
+                  alert("invalid email or password");
+                }
+              });
             });
-          });
-      });
+        });
     }
     setemail("");
     setpassword("");
   };
+
+  if (loading) {
+    return <CircularProgress />;
+  }
   return (
     <div>
       <h2>Movie Ticket Booking App</h2>
@@ -175,31 +189,31 @@ export const Signup = () => {
             <input
               type="file"
               placeholder="Pick Image"
-              onChange={e => setprofile(e.target.files[0])}
+              onChange={(e) => setprofile(e.target.files[0])}
             />
             <input
               type="text"
               placeholder="Name"
               value={name}
-              onChange={e => setname(e.target.value)}
+              onChange={(e) => setname(e.target.value)}
             />
             <input
               type="email"
               placeholder="Email"
               value={email}
-              onChange={e => setemail(e.target.value)}
+              onChange={(e) => setemail(e.target.value)}
             />
             <input
               type="password"
               placeholder="Password"
               value={password}
-              onChange={e => setpassword(e.target.value)}
+              onChange={(e) => setpassword(e.target.value)}
             />
             <input
               type="text"
               placeholder="Mobile"
               value={mobile}
-              onChange={e => setmobile(e.target.value)}
+              onChange={(e) => setmobile(e.target.value)}
             />
             <button onClick={handleSubmit}>Sign Up</button>
           </form>
@@ -222,20 +236,20 @@ export const Signup = () => {
             <input
               type="email"
               value={email}
-              onChange={e => setemail(e.target.value)}
+              onChange={(e) => setemail(e.target.value)}
               placeholder="Email"
             />
             <input
               type="password"
               placeholder="Password"
               value={password}
-              onChange={e => setpassword(e.target.value)}
+              onChange={(e) => setpassword(e.target.value)}
             />
             <input
               type="checkbox"
               style={{ marginLeft: "-66%", width: "-webkit-fill-available" }}
               value={admin}
-              onChange={e => setadmin(true)}
+              onChange={(e) => setadmin(true)}
             />
             <a href="#" style={{ marginLeft: "-8%", marginTop: "-8%" }}>
               Pick If You Are Admin
